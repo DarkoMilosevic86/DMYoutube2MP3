@@ -1,0 +1,4 @@
+wxPython
+yt-dlp
+pyperclip
+pyinstaller

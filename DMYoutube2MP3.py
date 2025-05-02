@@ -1,0 +1,209 @@
+# -*- coding: utf-8 -*-
+#
+# DM Youtube2MP3 – YouTube to MP3 downloader
+#
+# Copyright (C) 2025  Darko MILOŠEVIĆ <daremc86@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+#
+
+import wx
+import os
+import pyperclip
+from pathlib import Path
+import json
+import threading
+import getpass
+import wx.adv
+import yt_dlp
+import subprocess
+
+# Set download path
+USERNAME = getpass.getuser()
+DOWNLOAD_FOLDER = Path(f"C:/Users/{USERNAME}/Downloads/DM Youtube2mp3")
+HISTORY_FILE = os.path.join(os.path.dirname(__file__), "history.json")
+DOWNLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+
+# Windows notifications
+def send_notification(title, message):
+    notifyer = wx.adv.NotificationMessage(title, message)
+    notifyer.Show(timeout=5000)
+
+# History saving
+def save_to_history(title, filename):
+    history = load_history()
+    history.append({"title": title, "file": filename})
+    with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+        json.dump(history, f, indent=2)
+
+# Loading history
+def load_history():
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+# Download and convert to MP3
+def download_with_ytdlp(url, callback=None):
+    try:
+        send_notification("DM Youtube2MP3", "Download started...")
+
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'outtmpl': str(DOWNLOAD_FOLDER / '%(title)s.%(ext)s'),
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+            'quiet': True,
+            'noplaylist': True,
+            'ffmpeg_location': str(Path(__file__).parent),
+            'progress_hooks': [lambda d: callback("Finished: " + d['info_dict']['title']) if d['status'] == 'finished' else None],
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            title = info.get('title', 'Unknown title')
+            mp3_path = DOWNLOAD_FOLDER / f"{title}.mp3"
+            save_to_history(title, str(mp3_path))
+
+        send_notification("DM Youtube2MP3", f"Download finished: {title}")
+        if callback:
+            callback(f"Finished: {title}")
+
+    except Exception as e:
+        send_notification("Download Error", f"Unsuccessfull: {str(e)}")
+        if callback:
+            callback(f"Error: {str(e)}")
+
+# GUI application
+class MyFrame(wx.Frame):
+    def __init__(self):
+        super().__init__(parent=None, title="DM Youtube2MP3", size=(600, 400))
+        panel = wx.Panel(self)
+
+        vbox = wx.BoxSizer(wx.VERTICAL)
+
+        self.url_ctrl = wx.TextCtrl(panel)
+        self.url_ctrl.Bind(wx.EVT_TEXT, self.on_text_changed)
+        vbox.Add(self.url_ctrl, flag=wx.EXPAND | wx.ALL, border=10)
+
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+
+        paste_btn = wx.Button(panel, label="Paste from Clipboard")
+        paste_btn.Bind(wx.EVT_BUTTON, self.on_paste)
+        hbox.Add(paste_btn, flag=wx.RIGHT, border=5)
+
+        self.download_btn = wx.Button(panel, label="Download")
+        self.download_btn.Bind(wx.EVT_BUTTON, self.on_download)
+        self.download_btn.Enable(False)
+        hbox.Add(self.download_btn)
+
+        vbox.Add(hbox, flag=wx.LEFT | wx.BOTTOM, border=10)
+
+        self.history_list = wx.ListBox(panel)
+        self.history_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
+        self.history_list.Bind(wx.EVT_KEY_DOWN, self.on_press_del_key)
+        vbox.Add(self.history_list, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
+
+        clear_btn = wx.Button(panel, label="Clear history")
+        clear_btn.Bind(wx.EVT_BUTTON, self.on_clear_history)
+        vbox.Add(clear_btn, flag=wx.LEFT | wx.BOTTOM, border=10)
+
+        self.status = wx.StaticText(panel, label="")
+        vbox.Add(self.status, flag=wx.ALL, border=10)
+
+        panel.SetSizer(vbox)
+        self.load_history_into_list()
+
+    def on_paste(self, event):
+        url = pyperclip.paste()
+        if "youtube.com/watch" in url or "youtu.be" in url:
+            self.url_ctrl.SetValue(url)
+        else:
+            self.status.SetLabel("Clipboard does not contains a valid YouTube link.")
+
+    def on_download(self, event):
+        url = self.url_ctrl.GetValue()
+        if not url:
+            self.status.SetLabel("Please enter a YouTube URL.")
+            return
+        self.status.SetLabel("Download in progress...")
+        threading.Thread(target=download_with_ytdlp, args=(url, self.update_status), daemon=True).start()
+
+    def on_text_changed(self, event):
+        url = self.url_ctrl.GetValue().strip()
+        self.download_btn.Enable(bool(url))
+
+    def on_context_menu(self, event):
+        selection = self.history_list.GetSelection()
+        if selection == wx.NOT_FOUND:
+            return
+        context_menu = wx.Menu()
+        show_item = context_menu.Append(wx.ID_ANY, "Show in Folder")
+        delete_item = context_menu.Append(wx.ID_ANY, "Delete")
+        self.Bind(wx.EVT_MENU, lambda evt:self.on_show_in_folder(selection), show_item)
+        self.Bind(wx.EVT_MENU, lambda evt:self.on_delete(selection), delete_item)
+        self.PopupMenu(context_menu)
+        context_menu.Destroy()
+
+    def update_status(self, message):
+        wx.CallAfter(self.status.SetLabel, message)
+        wx.CallAfter(self.load_history_into_list)
+
+    def load_history_into_list(self, event=None):
+        self.history_list.Clear()
+        history = load_history()
+        for item in history:
+            self.history_list.Append(item["title"])
+
+    def on_clear_history(self, event):
+        if os.path.exists(HISTORY_FILE):
+            os.remove(HISTORY_FILE)
+        self.load_history_into_list()
+        self.status.SetLabel("History cleared.")
+
+    def on_show_in_folder(self, index):
+        history = load_history()
+        item = history[index]
+        item_path = item["file"]
+        if os.path.exists(item_path):
+            subprocess.Popen(['explorer', '/select,', os.path.normpath(item_path)])
+        else:
+            self.status.SetLabel("File not found.")
+
+    def on_delete(self, index):
+        history = load_history()
+        del history[index]
+        try:
+            with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+                json.dump(history, f, indent=2)
+            self.load_history_into_list()
+            self.status.SetLabel("Item deleted.")
+        except Exception as e:
+            self.status.SetLabel(f"Error while clearing history: {e}")
+            return
+
+    def on_press_del_key(self, event):
+        key_code = event.GetKeyCode()
+        if key_code == wx.WXK_DELETE:
+            self.on_delete(self.history_list.GetSelection())
+
+# Running the app
+if __name__ == '__main__':
+    app = wx.App(False)
+    frame = MyFrame()
+    frame.Show()
+    app.MainLoop()
