@@ -7,7 +7,7 @@ echo Welcome to the DMYoutube2MP3 builder!
 echo.
 set VENV_DIR=.venv
 set MAIN_SCRIPT=DMYoutube2MP3.py
-set DIST_NAME=DM_Youtube2MP3
+set DIST_NAME=DMYoutube2MP3
 set FFMPEG_FILE=ffmpeg.exe
 
 echo ----------------------------------------

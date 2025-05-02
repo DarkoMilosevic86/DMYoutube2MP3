@@ -32,7 +32,8 @@ import subprocess
 # Set download path
 USERNAME = getpass.getuser()
 DOWNLOAD_FOLDER = Path(f"C:/Users/{USERNAME}/Downloads/DM Youtube2mp3")
-HISTORY_FILE = os.path.join(os.path.dirname(__file__), "history.json")
+HISTORY_FILE = os.path.join(os.getenv('APPDATA'), 'DMYoutube2MP3', "history.json")
+os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
 DOWNLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # Windows notifications
@@ -93,7 +94,7 @@ class MyFrame(wx.Frame):
     def __init__(self):
         super().__init__(parent=None, title="DM Youtube2MP3", size=(600, 400))
         panel = wx.Panel(self)
-
+        self.Bind(wx.EVT_CLOSE, self.on_close)
         vbox = wx.BoxSizer(wx.VERTICAL)
 
         self.url_ctrl = wx.TextCtrl(panel)
@@ -195,6 +196,10 @@ class MyFrame(wx.Frame):
         except Exception as e:
             self.status.SetLabel(f"Error while clearing history: {e}")
             return
+
+    def on_close(self, event):
+        self.Destroy()
+        wx.GetApp().ExitMainLoop()
 
     def on_press_del_key(self, event):
         key_code = event.GetKeyCode()
