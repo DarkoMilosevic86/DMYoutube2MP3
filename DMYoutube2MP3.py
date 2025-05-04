@@ -28,13 +28,26 @@ import getpass
 import wx.adv
 import yt_dlp
 import subprocess
+import shutil
+import languages
 
-# Set download path
+# Set download path and config path
 USERNAME = getpass.getuser()
-DOWNLOAD_FOLDER = Path(f"C:/Users/{USERNAME}/Downloads/DM Youtube2mp3")
 HISTORY_FILE = os.path.join(os.getenv('APPDATA'), 'DMYoutube2MP3', "history.json")
+config_path = os.path.join(os.getenv('APPDATA'), 'DMYoutube2MP3', 'config.json')
 os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+if not os.path.exists(config_path):
+    shutil.copy2(os.path.join(os.getcwd(), 'config.json'), config_path)
+with open(config_path, 'r', encoding='utf-8') as file:
+    config = json.load(file)
+if config["general"]["download_path"] == "default":
+    DOWNLOAD_FOLDER = Path(f"C:/Users/{USERNAME}/Downloads/DM Youtube2mp3")
+else:
+    DOWNLOAD_FOLDER = config["general"]["download_path"]
 DOWNLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+
+# Translations
+_ = languages.load_translations()
 
 # Windows notifications
 def send_notification(title, message):
@@ -58,7 +71,7 @@ def load_history():
 # Download and convert to MP3
 def download_with_ytdlp(url, callback=None):
     try:
-        send_notification("DM Youtube2MP3", "Download started...")
+        send_notification("DM Youtube2MP3", _["Download started..."])
 
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -80,12 +93,12 @@ def download_with_ytdlp(url, callback=None):
             mp3_path = DOWNLOAD_FOLDER / f"{title}.mp3"
             save_to_history(title, str(mp3_path))
 
-        send_notification("DM Youtube2MP3", f"Download finished: {title}")
+        send_notification("DM Youtube2MP3", f"{_["Download finished"]}: {title}")
         if callback:
             callback(f"Finished: {title}")
 
     except Exception as e:
-        send_notification("Download Error", f"Unsuccessfull: {str(e)}")
+        send_notification(_["Download Error"], f"{_["Unsuccessfull"]}: {str(e)}")
         if callback:
             callback(f"Error: {str(e)}")
 
@@ -103,11 +116,11 @@ class MyFrame(wx.Frame):
 
         hbox = wx.BoxSizer(wx.HORIZONTAL)
 
-        paste_btn = wx.Button(panel, label="Paste from Clipboard")
+        paste_btn = wx.Button(panel, label=_["Paste from Clipboard"])
         paste_btn.Bind(wx.EVT_BUTTON, self.on_paste)
         hbox.Add(paste_btn, flag=wx.RIGHT, border=5)
 
-        self.download_btn = wx.Button(panel, label="Download")
+        self.download_btn = wx.Button(panel, label=_["Download"])
         self.download_btn.Bind(wx.EVT_BUTTON, self.on_download)
         self.download_btn.Enable(False)
         hbox.Add(self.download_btn)
@@ -116,10 +129,10 @@ class MyFrame(wx.Frame):
 
         self.history_list = wx.ListBox(panel)
         self.history_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
-        self.history_list.Bind(wx.EVT_KEY_DOWN, self.on_press_del_key)
+        self.history_list.Bind(wx.EVT_KEY_UP, self.on_press_del_key)
         vbox.Add(self.history_list, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
 
-        clear_btn = wx.Button(panel, label="Clear history")
+        clear_btn = wx.Button(panel, label=_["Clear history"])
         clear_btn.Bind(wx.EVT_BUTTON, self.on_clear_history)
         vbox.Add(clear_btn, flag=wx.LEFT | wx.BOTTOM, border=10)
 
@@ -128,20 +141,23 @@ class MyFrame(wx.Frame):
 
         panel.SetSizer(vbox)
         self.load_history_into_list()
+        history = load_history()
+        if len(history) > 0:
+            self.history_list.SetSelection(0)
 
     def on_paste(self, event):
         url = pyperclip.paste()
         if "youtube.com/watch" in url or "youtu.be" in url:
             self.url_ctrl.SetValue(url)
         else:
-            self.status.SetLabel("Clipboard does not contains a valid YouTube link.")
+            self.status.SetLabel(_["Clipboard does not contains a valid YouTube link."])
 
     def on_download(self, event):
         url = self.url_ctrl.GetValue()
         if not url:
-            self.status.SetLabel("Please enter a YouTube URL.")
+            self.status.SetLabel(_["Please enter a YouTube URL."])
             return
-        self.status.SetLabel("Download in progress...")
+        self.status.SetLabel(_["Download in progress..."])
         threading.Thread(target=download_with_ytdlp, args=(url, self.update_status), daemon=True).start()
 
     def on_text_changed(self, event):
@@ -153,8 +169,8 @@ class MyFrame(wx.Frame):
         if selection == wx.NOT_FOUND:
             return
         context_menu = wx.Menu()
-        show_item = context_menu.Append(wx.ID_ANY, "Show in Folder")
-        delete_item = context_menu.Append(wx.ID_ANY, "Delete")
+        show_item = context_menu.Append(wx.ID_ANY, _["Show in Folder"])
+        delete_item = context_menu.Append(wx.ID_ANY, _["Delete"])
         self.Bind(wx.EVT_MENU, lambda evt:self.on_show_in_folder(selection), show_item)
         self.Bind(wx.EVT_MENU, lambda evt:self.on_delete(selection), delete_item)
         self.PopupMenu(context_menu)
@@ -174,7 +190,7 @@ class MyFrame(wx.Frame):
         if os.path.exists(HISTORY_FILE):
             os.remove(HISTORY_FILE)
         self.load_history_into_list()
-        self.status.SetLabel("History cleared.")
+        self.status.SetLabel(_["History cleared."])
 
     def on_show_in_folder(self, index):
         history = load_history()
@@ -192,9 +208,11 @@ class MyFrame(wx.Frame):
             with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
                 json.dump(history, f, indent=2)
             self.load_history_into_list()
-            self.status.SetLabel("Item deleted.")
+            if len(history) > 0:
+                self.history_list.SetSelection(index)
+            self.status.SetLabel(_["Item deleted."])
         except Exception as e:
-            self.status.SetLabel(f"Error while clearing history: {e}")
+            self.status.SetLabel(f"{_["Error while clearing history"]}: {e}")
             return
 
     def on_close(self, event):
