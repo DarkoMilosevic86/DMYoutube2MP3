@@ -12,8 +12,8 @@
 
     
 !include "mui2.nsh"
-Name "DMYoutube2MP3 1.0"
-OutFile "Setup.exe"
+Name "DMYoutube2MP3 1.0 BETA"
+OutFile "DMYoutube2MP3_1.0_BETA.exe"
 Unicode True
 InstallDir "$PROGRAMFILES64\DMYoutube2MP3"
 RequestExecutionLevel admin
@@ -44,10 +44,14 @@ Section "Install"
 SetOutPath "$INSTDIR"
 File "dist\DMYoutube2MP3\DMYoutube2MP3.exe"
 File "LICENSE"
+File "config.json"
 File "README.md"
 File "res\DMYoutube2MP3.ico"
 SetOutPath "$INSTDIR\_internal"
 File /r "dist\DMYoutube2MP3\_internal\*"
+File "config.json"
+SetOutPath "$INSTDIR\_internal\languages"
+File /r "languages\*"
 WriteUninstaller "$INSTDIR\Uninstall.exe"
 WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DMYoutube2MP3" \
 "DisplayName" "DMYoutube2MP3"

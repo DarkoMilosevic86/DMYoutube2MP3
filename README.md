@@ -13,8 +13,11 @@ It features a lightweight GUI built with `wxPython`, automatic clipboard detecti
 - 📋 Persistent download history with:
   - Right-click context menu (`Show in Folder`, `Delete`)
   - Delete support via keyboard (`Delete` key)
+  - Enter or NumPad Enter, opens selected item in Windows Explorer
 - 📁 Automatically saves files to:
 `C:\Users\yourusername\Downloads\DMYoutube2MP3`
+- Multi lingual support
+
 ## 🚀 Building from source
 > Python 3.10+ is recommended.
 
@@ -23,6 +26,15 @@ It features a lightweight GUI built with `wxPython`, automatic clipboard detecti
 ```bash
 git clone https://github.com/DarkoMilosevic86/DMYoutube2MP3.git
 cd DMYoutube2MP3
+```
+
 ### 2. Build the source code
+
 - To build the source code, make sure Python 3.10+ is installed on your computer.
 - Run `build.bat` to build the DMYoutube2MP3 from source.
+#### Important note!
+To build the DMYoutube2MP3 from the source code, you must download ffmpeg binary and copy the file ffmpeg.exe to the main repository folder
+
+## 🤝 Contributing
+
+We welcome contributions to DM Youtube2MP3! If you'd like to report a bug, suggest a feature, or contribute code, please check out our [CONTRIBUTING.md](CONTRIBUTING.md) guide.

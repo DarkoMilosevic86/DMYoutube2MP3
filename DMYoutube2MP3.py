@@ -43,7 +43,7 @@ with open(config_path, 'r', encoding='utf-8') as file:
 if config["general"]["download_path"] == "default":
     DOWNLOAD_FOLDER = Path(f"C:/Users/{USERNAME}/Downloads/DM Youtube2mp3")
 else:
-    DOWNLOAD_FOLDER = config["general"]["download_path"]
+    DOWNLOAD_FOLDER = Path(f"{config["general"]["download_path"]}")
 DOWNLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # Translations
@@ -130,6 +130,7 @@ class MyFrame(wx.Frame):
         self.history_list = wx.ListBox(panel)
         self.history_list.Bind(wx.EVT_CONTEXT_MENU, self.on_context_menu)
         self.history_list.Bind(wx.EVT_KEY_UP, self.on_press_del_key)
+        self.history_list.Bind(wx.EVT_LEFT_DCLICK, self.on_double_click)
         vbox.Add(self.history_list, proportion=1, flag=wx.EXPAND | wx.ALL, border=10)
 
         clear_btn = wx.Button(panel, label=_["Clear history"])
@@ -138,7 +139,9 @@ class MyFrame(wx.Frame):
 
         self.status = wx.StaticText(panel, label="")
         vbox.Add(self.status, flag=wx.ALL, border=10)
-
+        settings_btn = wx.Button(panel, label=_["Settings"])
+        settings_btn.Bind(wx.EVT_BUTTON, self.on_open_settings)
+        vbox.Add(settings_btn, flag=wx.LEFT | wx.BOTTOM, border=10)
         panel.SetSizer(vbox)
         self.load_history_into_list()
         history = load_history()
@@ -223,6 +226,17 @@ class MyFrame(wx.Frame):
         key_code = event.GetKeyCode()
         if key_code == wx.WXK_DELETE:
             self.on_delete(self.history_list.GetSelection())
+        if key_code == wx.WXK_NUMPAD_ENTER or key_code == wx.WXK_RETURN:
+            self.on_show_in_folder(self.history_list.GetSelection())
+    def on_open_settings(self, event):
+        from settings import SettingsDialog
+        dlg = SettingsDialog(self)
+        dlg.ShowModal()
+        dlg.Destroy()
+
+    def on_double_click(self, event):
+        self.on_show_in_folder(self.history_list.GetSelection())
+
 
 # Running the app
 if __name__ == '__main__':

@@ -2,9 +2,9 @@
     "Download started...": "Преузимање је започето.",
     "Download finished": "Преузимање је завршено",
     "Download Error": "Грешка у Преузимању",
-    "Unsuccessfull": "Неуспешно",
+    "Unsuccessfull": "Неуспјешно",
     "YouTube URL:": "YouTube веза:",
-    "Paste from Clipboard": "Залепи из Клипборд-а",
+    "Paste from Clipboard": "Залијепи из Клипборд-а",
     "Download": "Преузми",
     "Download history:": "Историја преузимања:",
     "Clear history": "Очисти историју",
@@ -23,6 +23,6 @@
     "Save Settings": "Сачувај Подешавања",
     "Cancel": "Откажи",
     "Select download folder": "Изаберите директоријум за преузимања",
-    "Settings saved. Restart app to apply changes.": "Подешавања су сачувана. Рестартујте апликацију како бисте применили промене.",
+    "Settings saved. Restart app to apply changes.": "Подешавања су сачувана. Рестартујте апликацију како бисте примијенили промјене.",
     "Info": "Информација"
 }
