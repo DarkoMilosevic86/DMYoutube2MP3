@@ -174,3 +174,4 @@ cython_debug/
 .pypirc
 # Ignore ffmpeg binary
 ffmpeg.exe
+DMYoutube2MP3_1.0_BETA.exe

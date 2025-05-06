@@ -50,8 +50,8 @@ DOWNLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 _ = languages.load_translations()
 
 # Windows notifications
-def send_notification(title, message):
-    notifyer = wx.adv.NotificationMessage(title, message)
+def send_notification(title, message, parent=None):
+    notifyer = wx.adv.NotificationMessage(title, message, parent, flags=wx.ICON_INFORMATION)
     notifyer.Show(timeout=5000)
 
 # History saving
@@ -71,7 +71,7 @@ def load_history():
 # Download and convert to MP3
 def download_with_ytdlp(url, callback=None):
     try:
-        send_notification("DM Youtube2MP3", _["Download started..."])
+        send_notification("DM Youtube2MP3", _["Download started..."], parent=None)
 
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -92,8 +92,7 @@ def download_with_ytdlp(url, callback=None):
             title = info.get('title', 'Unknown title')
             mp3_path = DOWNLOAD_FOLDER / f"{title}.mp3"
             save_to_history(title, str(mp3_path))
-
-        send_notification("DM Youtube2MP3", f"{_["Download finished"]}: {title}")
+        wx.CallAfter(send_notification, "DM Youtube2MP3", f"{_["Download finished"]}: {title}", wx.GetTopLevelWindows()[0])
         if callback:
             callback(f"Finished: {title}")
 
