@@ -94,7 +94,7 @@ def download_with_ytdlp(url, callback=None):
             save_to_history(title, str(mp3_path))
         wx.CallAfter(send_notification, "DM Youtube2MP3", f"{_["Download finished"]}: {title}", wx.GetTopLevelWindows()[0])
         if callback:
-            callback(f"Finished: {title}")
+            callback(f"{_["Finished:"]} {title}")
 
     except Exception as e:
         send_notification(_["Download Error"], f"{_["Unsuccessfull"]}: {str(e)}")

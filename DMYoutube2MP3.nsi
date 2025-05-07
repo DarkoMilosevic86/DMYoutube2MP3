@@ -13,7 +13,7 @@
     
 !include "mui2.nsh"
 Name "DMYoutube2MP3"
-OutFile "DMYoutube2MP3_1.0_BETA.exe"
+OutFile "DMYoutube2MP3_1.0_Setup.exe"
 Unicode True
 InstallDir "$PROGRAMFILES64\DMYoutube2MP3"
 RequestExecutionLevel admin
