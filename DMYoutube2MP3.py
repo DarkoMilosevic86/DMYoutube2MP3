@@ -94,6 +94,8 @@ def download_with_ytdlp(url, callback=None):
 
             if 'entries' in info:  # Playlist
                 for entry in info['entries']:
+                    if entry is None:
+                        continue
                     title = entry.get('title', 'Unknown title')
                     mp3_path = DOWNLOAD_FOLDER / f"{title}.mp3"
                     save_to_history(title, str(mp3_path))
@@ -102,13 +104,13 @@ def download_with_ytdlp(url, callback=None):
                 mp3_path = DOWNLOAD_FOLDER / f"{title}.mp3"
                 save_to_history(title, str(mp3_path))
 
-        wx.CallAfter(send_notification, "DM Youtube2MP3", _["Download finished"], wx.GetTopLevelWindows()[0])
+        wx.CallAfter(send_notification, "DM Youtube2MP3", f"{_["Download finished"]}: {title}", wx.GetTopLevelWindows()[0])
         if callback:
             callback(f"{_['Finished:']} {info.get('title', 'Multiple')}")
     except Exception as e:
         send_notification(_["Download Error"], f"{_['Unsuccessfull']}: {str(e)}")
         if callback:
-            callback(f"Error: {str(e)}")
+            callback(f"{_["Download Error"]} {str(e)}")
 
 # GUI application
 class MyFrame(wx.Frame):
@@ -150,6 +152,11 @@ class MyFrame(wx.Frame):
         settings_btn = wx.Button(panel, label=_["Settings"])
         settings_btn.Bind(wx.EVT_BUTTON, self.on_open_settings)
         vbox.Add(settings_btn, flag=wx.LEFT | wx.BOTTOM, border=10)
+        self.progress_gauge = wx.Gauge(panel, range=100, style=wx.GA_HORIZONTAL)
+        vbox.Add(self.progress_gauge, flag=wx.EXPAND | wx.ALL, border=10)
+        self.progress_gauge.Hide()
+        self.gauge_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.on_gauge_pulse, self.gauge_timer)
         panel.SetSizer(vbox)
         self.load_history_into_list()
         history = load_history()
@@ -169,11 +176,16 @@ class MyFrame(wx.Frame):
             self.status.SetLabel(_["Please enter a YouTube URL."])
             return
         self.status.SetLabel(_["Download in progress..."])
+        self.progress_gauge.Show()
+        self.Layout()
+        self.gauge_timer.Start(100)
+        self.Layout()
         threading.Thread(target=download_with_ytdlp, args=(url, self.update_status), daemon=True).start()
 
     def on_text_changed(self, event):
         url = self.url_ctrl.GetValue().strip()
-        self.download_btn.Enable(bool(url))
+        if url.__contains__('https://youtube.com/watch?') or url.__contains__('https://www.youtube.com/watch?'):
+            self.download_btn.Enable(bool(url))
 
     def on_context_menu(self, event):
         selection = self.history_list.GetSelection()
@@ -190,6 +202,8 @@ class MyFrame(wx.Frame):
     def update_status(self, message):
         wx.CallAfter(self.status.SetLabel, message)
         wx.CallAfter(self.load_history_into_list)
+        wx.CallAfter(self.gauge_timer.Stop)
+        wx.CallAfter(self.progress_gauge.Hide)
 
     def load_history_into_list(self, event=None):
         self.history_list.Clear()
@@ -244,6 +258,10 @@ class MyFrame(wx.Frame):
 
     def on_double_click(self, event):
         self.on_show_in_folder(self.history_list.GetSelection())
+
+    def on_gauge_pulse(self, event):
+        self.progress_gauge.Pulse()
+
 
 
 # Running the app
