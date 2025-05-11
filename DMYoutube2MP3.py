@@ -73,6 +73,8 @@ def download_with_ytdlp(url, callback=None):
     try:
         send_notification("DM Youtube2MP3", _["Download started..."], parent=None)
 
+        is_playlist = 'playlist' in url or 'list=' in url
+
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': str(DOWNLOAD_FOLDER / '%(title)s.%(ext)s'),
@@ -82,22 +84,29 @@ def download_with_ytdlp(url, callback=None):
                 'preferredquality': '192',
             }],
             'quiet': True,
-            'noplaylist': True,
+            'noplaylist': False,
+            'ignoreerrors': True,
             'ffmpeg_location': str(Path(__file__).parent),
-            'progress_hooks': [lambda d: callback("Finished: " + d['info_dict']['title']) if d['status'] == 'finished' else None],
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-            title = info.get('title', 'Unknown title')
-            mp3_path = DOWNLOAD_FOLDER / f"{title}.mp3"
-            save_to_history(title, str(mp3_path))
-        wx.CallAfter(send_notification, "DM Youtube2MP3", f"{_["Download finished"]}: {title}", wx.GetTopLevelWindows()[0])
-        if callback:
-            callback(f"{_["Finished:"]} {title}")
 
+            if 'entries' in info:  # Playlist
+                for entry in info['entries']:
+                    title = entry.get('title', 'Unknown title')
+                    mp3_path = DOWNLOAD_FOLDER / f"{title}.mp3"
+                    save_to_history(title, str(mp3_path))
+            else:  # Single video
+                title = info.get('title', 'Unknown title')
+                mp3_path = DOWNLOAD_FOLDER / f"{title}.mp3"
+                save_to_history(title, str(mp3_path))
+
+        wx.CallAfter(send_notification, "DM Youtube2MP3", _["Download finished"], wx.GetTopLevelWindows()[0])
+        if callback:
+            callback(f"{_['Finished:']} {info.get('title', 'Multiple')}")
     except Exception as e:
-        send_notification(_["Download Error"], f"{_["Unsuccessfull"]}: {str(e)}")
+        send_notification(_["Download Error"], f"{_['Unsuccessfull']}: {str(e)}")
         if callback:
             callback(f"Error: {str(e)}")
 
