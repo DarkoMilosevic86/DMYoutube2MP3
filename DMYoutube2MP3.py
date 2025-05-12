@@ -179,7 +179,6 @@ class MyFrame(wx.Frame):
         self.progress_gauge.Show()
         self.Layout()
         self.gauge_timer.Start(100)
-        self.Layout()
         threading.Thread(target=download_with_ytdlp, args=(url, self.update_status), daemon=True).start()
 
     def on_text_changed(self, event):
