@@ -13,7 +13,7 @@
     
 !include "mui2.nsh"
 Name "DMYoutube2MP3"
-OutFile "DMYoutube2MP3_1.0_Setup.exe"
+OutFile "DMYoutube2MP3_1.1_Setup.exe"
 Unicode True
 InstallDir "$PROGRAMFILES64\DMYoutube2MP3"
 RequestExecutionLevel admin
@@ -37,8 +37,8 @@ VIAddVersionKey /LANG=${LANG_ENGLISH} "CompanyName" "Darko Milošević"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalTrademarks" "DMYoutube2MP3 Setup is a trademark of Darko Milošević"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "LegalCopyright" "© Darko Milošević"
 VIAddVersionKey /LANG=${LANG_ENGLISH} "FileDescription" "DMYoutube2MP3 setup program"
-VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "1.0.0"
-VIProductVersion "1.0.0.0"
+VIAddVersionKey /LANG=${LANG_ENGLISH} "FileVersion" "1.1.0"
+VIProductVersion "1.1.0.0"
 
 Section "Install"
 SetOutPath "$INSTDIR"
