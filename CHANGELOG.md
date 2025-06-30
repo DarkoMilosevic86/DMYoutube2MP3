@@ -7,14 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-<<<<<<< HEAD
-=======
 ## [1.1.1] – 2025-06-30
 ### Fixed
 - Language display names
 ---
 
->>>>>>> origin/LANguage_NAMes_Fix
 ## [1.1.0] – 2025-05-12
 ### Added
 - Support for **YouTube playlists** – the app now detects playlist URLs and downloads each video individually.

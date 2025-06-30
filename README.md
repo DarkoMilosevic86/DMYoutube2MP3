@@ -18,6 +18,15 @@ It features a lightweight GUI built with `wxPython`, automatic clipboard detecti
 `C:\Users\yourusername\Downloads\DMYoutube2MP3`
 - Multi lingual support
 
+## 📚DMYoutube2MP3 documentation
+
+- [About DMYoutube2MP3](docs/index.md)
+- [Installation](docs/installation.md)
+- [Using DMYoutube2MP3](docs/usage.md)
+- [Frequently asked questions](docs/faq.md)
+- [DMYoutube2MP3 localization](docs/localization.md)
+- [Contribution to DMYoutube2MP3](docs/contributing.md)
+
 ## 🚀 Building from source
 > Python 3.10+ is recommended.
 
