@@ -77,6 +77,8 @@ DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\DMYoutube
 Delete "$INSTDIR\*.*"
 Delete "$INSTDIR\_internal\*.*"
 RMDir /r "$INSTDIR\_internal"
+Delete "$APPDATA\DMYoutube2MP3\*.*"
+RMDir "$APPDATA\DMYoutube2MP3"
 Delete "$SMPROGRAMS\DMYoutube2MP3\*.*"
 RMDir /r "$SMPROGRAMS\DMYoutube2MP3"
 Delete "$DESKTOP\DMYoutube2MP3.lnk"

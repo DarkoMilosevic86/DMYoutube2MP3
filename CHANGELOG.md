@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.1.1] – 2025-06-30
+## [1.1.1] – 2025-07-01
 ### Fixed
 - Language display names
+### Added
+- Removing configuration and history file from the %APPDATA% in the uninstaller
 ---
 
 ## [1.1.0] – 2025-05-12

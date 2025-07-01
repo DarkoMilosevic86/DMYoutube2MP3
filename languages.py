@@ -24,7 +24,7 @@ import locale
 from babel import Locale
 
 LANG_FOLDER = os.path.join(os.path.dirname(__file__), 'languages')
-DEFAULT_LANG = 'en_US'
+DEFAULT_LANG = 'en'
 CONFIG_PATH = os.path.join(os.getenv('APPDATA'), 'DMYoutube2MP3', 'config.json')
 
 def list_languages():
@@ -32,7 +32,7 @@ def list_languages():
     return [f.replace('.json', '') for f in os.listdir(LANG_FOLDER) if f.endswith('.json')]
 
 def get_system_lang():
-    """Returns the system language code (e.g. 'sr_RS') or None if not available."""
+    """Returns the system language code (e.g. 'en') or None if not available."""
     sys_lang, _ = locale.getdefaultlocale()
     return sys_lang
 
