@@ -2,7 +2,7 @@
 #
 # DM Youtube2MP3 – YouTube to MP3 downloader
 #
-# Copyright (C) 2025  Darko MILOŠEVIĆ <daremc86@gmail.com>
+# Copyright (C) 2025-2026  Darko MILOŠEVIĆ <daremc86@gmail.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ import yt_dlp
 import subprocess
 import shutil
 import languages
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 
 # Set download path and config path
 USERNAME = getpass.getuser()
@@ -43,7 +44,7 @@ with open(config_path, 'r', encoding='utf-8') as file:
 if config["general"]["download_path"] == "default":
     DOWNLOAD_FOLDER = Path(f"C:/Users/{USERNAME}/Downloads/DM Youtube2mp3")
 else:
-    DOWNLOAD_FOLDER = Path(f"{config["general"]["download_path"]}")
+    DOWNLOAD_FOLDER = Path(f"{config['general']['download_path']}")
 DOWNLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # Translations
@@ -68,49 +69,94 @@ def load_history():
             return json.load(f)
     return []
 
+# Normalize YouTube URL and detect type (video or playlist)
+def normalize_youtube_url(url):
+    parsed = urlparse(url)
+    query = parse_qs(parsed.query)
+    is_playlist = False
+
+    if 'list' in query:
+        list_id = query['list'][0]
+        if list_id.startswith(('PL', 'OL')):
+            is_playlist = True
+
+    if is_playlist:
+        clean_url = f"https://www.youtube.com/playlist?list={query['list'][0]}"
+    else:
+        if 'v' in query:
+            clean_query = {'v': query['v'][0]}
+            clean_url = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                parsed.path,
+                '',
+                urlencode(clean_query),
+                ''
+            ))
+        elif parsed.netloc == 'youtu.be':
+            clean_url = url
+        else:
+            clean_url = url
+
+    if 'start_radio' in query:
+        is_playlist = False
+
+    return (clean_url, is_playlist)
+
 # Download and convert to MP3
-def download_with_ytdlp(url, callback=None):
+def download_with_ytdlp(url, progress_callback=None, status_callback=None):
     try:
         send_notification("DM Youtube2MP3", _["Download started..."], parent=None)
 
-        is_playlist = 'playlist' in url or 'list=' in url
+        clean_url, is_playlist = normalize_youtube_url(url)
+
+        # progress_hook funkcija
+        def progress_hook(d):
+            if d['status'] == 'downloading':
+                if 'total_bytes' in d and d['total_bytes'] > 0:
+                    percent = d.get('downloaded_bytes', 0) / d['total_bytes'] * 100
+                    wx.CallAfter(progress_callback, percent)
+                    wx.CallAfter(status_callback, f"{_['Download in progress...']} {percent:.1f}%")
+            elif d['status'] == 'finished':
+                wx.CallAfter(progress_callback, 100)
 
         ydl_opts = {
             'format': 'bestaudio/best',
             'outtmpl': str(DOWNLOAD_FOLDER / '%(title)s.%(ext)s'),
+            'progress_hooks': [progress_hook],
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
             'quiet': True,
-            'noplaylist': False,
             'ignoreerrors': True,
+            'noplaylist': not is_playlist,
             'ffmpeg_location': str(Path(__file__).parent),
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+            info = ydl.extract_info(clean_url, download=True)
 
-            if 'entries' in info:  # Playlist
+            if 'entries' in info:
                 for entry in info['entries']:
                     if entry is None:
                         continue
                     title = entry.get('title', 'Unknown title')
                     mp3_path = DOWNLOAD_FOLDER / f"{title}.mp3"
                     save_to_history(title, str(mp3_path))
-            else:  # Single video
+            else:
                 title = info.get('title', 'Unknown title')
                 mp3_path = DOWNLOAD_FOLDER / f"{title}.mp3"
                 save_to_history(title, str(mp3_path))
 
-        wx.CallAfter(send_notification, "DM Youtube2MP3", f"{_["Download finished"]}: {title}", wx.GetTopLevelWindows()[0])
-        if callback:
-            callback(f"{_['Finished:']} {info.get('title', 'Multiple')}")
+        wx.CallAfter(send_notification, "DM Youtube2MP3", f"{_['Download finished']}: {title}", wx.GetTopLevelWindows()[0])
+        if status_callback:
+            status_callback(f"{_['Finished:']} {info.get('title', 'Multiple')}")
     except Exception as e:
         send_notification(_["Download Error"], f"{_['Unsuccessfull']}: {str(e)}")
-        if callback:
-            callback(f"{_["Download Error"]} {str(e)}")
+        if status_callback:
+            status_callback(f"{_['Download Error']} {str(e)}")
 
 # GUI application
 class MyFrame(wx.Frame):
@@ -152,11 +198,11 @@ class MyFrame(wx.Frame):
         settings_btn = wx.Button(panel, label=_["Settings"])
         settings_btn.Bind(wx.EVT_BUTTON, self.on_open_settings)
         vbox.Add(settings_btn, flag=wx.LEFT | wx.BOTTOM, border=10)
+
         self.progress_gauge = wx.Gauge(panel, range=100, style=wx.GA_HORIZONTAL)
         vbox.Add(self.progress_gauge, flag=wx.EXPAND | wx.ALL, border=10)
         self.progress_gauge.Hide()
-        self.gauge_timer = wx.Timer(self)
-        self.Bind(wx.EVT_TIMER, self.on_gauge_pulse, self.gauge_timer)
+
         panel.SetSizer(vbox)
         self.load_history_into_list()
         history = load_history()
@@ -176,10 +222,24 @@ class MyFrame(wx.Frame):
             self.status.SetLabel(_["Please enter a YouTube URL."])
             return
         self.status.SetLabel(_["Download in progress..."])
+        self.progress_gauge.SetValue(0)
         self.progress_gauge.Show()
         self.Layout()
-        self.gauge_timer.Start(100)
-        threading.Thread(target=download_with_ytdlp, args=(url, self.update_status), daemon=True).start()
+
+        threading.Thread(
+            target=download_with_ytdlp,
+            args=(url, self.update_progress, self.update_status),
+            daemon=True
+        ).start()
+
+    def update_progress(self, percent):
+        self.progress_gauge.SetValue(int(percent))
+
+    def update_status(self, message):
+        wx.CallAfter(self.status.SetLabel, message)
+        if "Finished" in message or "Error" in message:
+            wx.CallAfter(self.load_history_into_list)
+            wx.CallAfter(self.progress_gauge.Hide)
 
     def on_text_changed(self, event):
         url = self.url_ctrl.GetValue().strip()
@@ -197,12 +257,6 @@ class MyFrame(wx.Frame):
         self.Bind(wx.EVT_MENU, lambda evt:self.on_delete(selection), delete_item)
         self.PopupMenu(context_menu)
         context_menu.Destroy()
-
-    def update_status(self, message):
-        wx.CallAfter(self.status.SetLabel, message)
-        wx.CallAfter(self.load_history_into_list)
-        wx.CallAfter(self.gauge_timer.Stop)
-        wx.CallAfter(self.progress_gauge.Hide)
 
     def load_history_into_list(self, event=None):
         self.history_list.Clear()
@@ -236,7 +290,7 @@ class MyFrame(wx.Frame):
                 self.history_list.SetSelection(index)
             self.status.SetLabel(_["Item deleted."])
         except Exception as e:
-            self.status.SetLabel(f"{_["Error while clearing history"]}: {e}")
+            self.status.SetLabel(f"{_['Error while clearing history']}: {e}")
             return
 
     def on_close(self, event):
@@ -249,6 +303,7 @@ class MyFrame(wx.Frame):
             self.on_delete(self.history_list.GetSelection())
         if key_code == wx.WXK_NUMPAD_ENTER or key_code == wx.WXK_RETURN:
             self.on_show_in_folder(self.history_list.GetSelection())
+
     def on_open_settings(self, event):
         from settings import SettingsDialog
         dlg = SettingsDialog(self)
@@ -257,10 +312,6 @@ class MyFrame(wx.Frame):
 
     def on_double_click(self, event):
         self.on_show_in_folder(self.history_list.GetSelection())
-
-    def on_gauge_pulse(self, event):
-        self.progress_gauge.Pulse()
-
 
 
 # Running the app
